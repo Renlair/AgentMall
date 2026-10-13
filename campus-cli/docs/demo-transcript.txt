@@ -1,0 +1,103 @@
+AgentMall 校园二手交易实验（纯内存，退出后数据清空）
+当前身份：访客
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+reviews — 查看商品评价
+exit — 退出程序
+指令> 用户名> 密码（控制台明文输入）> 登录成功。
+当前用户：seller / SELLER
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+publish — 发布二手商品
+products — 我的商品
+off — 下架商品
+orders — 我的订单/管理员全部订单
+confirm — 卖家确认订单
+cancel — 取消订单并释放商品
+reviews — 查看商品评价
+exit — 退出程序
+指令> 商品名> 分类> 成色与交接描述> 价格> 发布成功：#3 数据结构教材 | 图书 | ¥18.50 | AVAILABLE | 卖家#3 | 九成新，图书馆交接
+指令> 已退出登录。
+当前身份：访客
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+reviews — 查看商品评价
+exit — 退出程序
+指令> 用户名> 密码（控制台明文输入）> 登录成功。
+当前用户：buyer / BUYER
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+buy — 购买商品
+orders — 我的订单/管理员全部订单
+receive — 买家确认收货
+cancel — 取消订单并释放商品
+review — 评价订单
+reviews — 查看商品评价
+exit — 退出程序
+指令> 关键词（留空不限）> 分类（留空不限）> 最高价格（留空不限）> #3 数据结构教材 | 图书 | ¥18.50 | AVAILABLE | 卖家#3 | 九成新，图书馆交接
+指令> 商品编号> 下单成功，订单 #1，等待卖家确认。
+指令> 已退出登录。
+当前身份：访客
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+reviews — 查看商品评价
+exit — 退出程序
+指令> 用户名> 密码（控制台明文输入）> 登录成功。
+当前用户：seller / SELLER
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+publish — 发布二手商品
+products — 我的商品
+off — 下架商品
+orders — 我的订单/管理员全部订单
+confirm — 卖家确认订单
+cancel — 取消订单并释放商品
+reviews — 查看商品评价
+exit — 退出程序
+指令> 订单编号> 订单已确认，请线下交接。
+指令> 已退出登录。
+当前身份：访客
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+reviews — 查看商品评价
+exit — 退出程序
+指令> 用户名> 密码（控制台明文输入）> 登录成功。
+当前用户：buyer / BUYER
+help — 显示菜单
+register — 注册买家/卖家
+login — 登录
+logout — 退出登录
+search — 按关键词、分类、预算查询商品
+buy — 购买商品
+orders — 我的订单/管理员全部订单
+receive — 买家确认收货
+cancel — 取消订单并释放商品
+review — 评价订单
+reviews — 查看商品评价
+exit — 退出程序
+指令> 订单编号> 交易完成，可以评价。
+指令> 订单编号> 评分（1–5）> 评价内容> 评价成功，编号 #1
+指令> 商品编号> #1 商品#3 订单#1 | 5 星 | 描述准确，交接顺利 | 公开
+指令> #1 数据结构教材 | ¥18.50 | COMPLETED | 买家#2 卖家#3 | 2026-10-13T05:21:51.334108
+指令> 程序结束，内存数据已释放。
