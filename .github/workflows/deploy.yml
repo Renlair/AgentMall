@@ -32,14 +32,21 @@ jobs:
           from pathlib import Path
           value=os.environ.get('DEPLOY_SSH_KEY','').replace('\\n','\n').replace('\r','')
           compact=''.join(value.split())
-          match=re.search(r'-----BEGINOPENSSHPRIVATEKEY-----([A-Za-z0-9+/=]+)-----ENDOPENSSHPRIVATEKEY-----',compact)
-          if not match:
-              print('Private-key BEGIN marker present: '+str('-----BEGINOPENSSHPRIVATEKEY-----' in compact))
-              print('Private-key END marker present: '+str('-----ENDOPENSSHPRIVATEKEY-----' in compact))
-              print('Value resembles a public key: '+str(value.strip().startswith(('ssh-ed25519 ','ssh-rsa '))))
-              print('Value resembles a shell command: '+str('cat /root/' in value))
-              raise SystemExit('The Secret does not contain a complete private-key block. No credential content has been printed.')
-          body=''.join(match.group(1).split())
+          pattern=r'-----BEGINOPENSSHPRIVATEKEY-----([A-Za-z0-9+/=]+)-----ENDOPENSSHPRIVATEKEY-----'
+          match=re.search(pattern,compact)
+          body=''.join(match.group(1).split()) if match else ''
+          if not body:
+              try:
+                  decoded=base64.b64decode(compact,validate=True)
+              except Exception:
+                  decoded=b''
+              if decoded.startswith(b'openssh-key-v1\0'):
+                  body=compact
+              else:
+                  match=re.search(pattern,''.join(decoded.decode('ascii',errors='ignore').split()))
+                  if match: body=match.group(1)
+          if not body:
+              raise SystemExit('The Secret is not an OpenSSH private key or its base64 encoding. No credential content has been printed.')
           try:
               raw=base64.b64decode(body,validate=True)
               assert raw.startswith(b'openssh-key-v1\0')
