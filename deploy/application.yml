@@ -1,0 +1,17 @@
+server:
+  port: 9090
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USER:agentmall}
+    password: ${DB_PASSWORD}
+    url: jdbc:mysql://db:3306/ai_shopping?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath:mapper/*.xml
+fileBaseUrl: ""

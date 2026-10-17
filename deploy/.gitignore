@@ -1,0 +1,7 @@
+.env
+.acceptance.json
+compose.override.yaml
+*.tar
+*.tar.gz
+*.bak
+compose.ci.yaml

@@ -1,0 +1,56 @@
+name: agentmall
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  db:
+    image: mysql:8.4
+    platform: linux/amd64
+    restart: unless-stopped
+    mem_limit: 1g
+    logging: *logging
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--innodb-buffer-pool-size=128M", "--max-connections=60", "--performance-schema=OFF"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?generate .env first}
+      MYSQL_DATABASE: ai_shopping
+      MYSQL_USER: agentmall
+      MYSQL_PASSWORD: ${DB_PASSWORD:?generate .env first}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?generate .env first}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+  backend:
+    image: agentmall-backend:local-20261016
+    platform: linux/amd64
+    restart: unless-stopped
+    mem_limit: 1g
+    logging: *logging
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:?generate .env first}
+      DB_USER: agentmall
+    volumes:
+      - uploads:/app/files
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    image: ${WEB_IMAGE:-agentmall-web:v0.0.1-20261017}
+    platform: linux/amd64
+    restart: unless-stopped
+    mem_limit: 128m
+    logging: *logging
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+    depends_on:
+      - backend
+volumes:
+  db_data:
+  uploads:

@@ -1,0 +1,60 @@
+name: Deploy AgentMall
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentmall-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check deployment credentials
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.AGENTMALL_DEPLOY_SSH_KEY }}
+        run: test -n "$DEPLOY_SSH_KEY" || { echo 'Configure AGENTMALL_DEPLOY_SSH_KEY first'; exit 1; }
+      - name: Test release receiver
+        run: python3 deploy/ci/test_receiver.py
+      - name: Build Linux amd64 images
+        run: |
+          docker build --platform linux/amd64 -f deploy/backend.Dockerfile -t "agentmall-backend:git-$GITHUB_SHA" .
+          docker build --platform linux/amd64 -f deploy/web.Dockerfile -t "agentmall-web:git-$GITHUB_SHA" .
+      - name: Package release
+        run: |
+          mkdir -p "$RUNNER_TEMP/agentmall-release"
+          docker save "agentmall-backend:git-$GITHUB_SHA" "agentmall-web:git-$GITHUB_SHA" | gzip -1 > "$RUNNER_TEMP/agentmall-release/images.tar.gz"
+          python3 - <<'PY'
+          import json, os, hashlib
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'agentmall-release'
+          digest=hashlib.file_digest((root/'images.tar.gz').open('rb'),'sha256').hexdigest()
+          (root/'release.json').write_text(json.dumps({'commit':os.environ['GITHUB_SHA'],'sha256':digest}))
+          PY
+          tar -C "$RUNNER_TEMP/agentmall-release" -cf "$RUNNER_TEMP/agentmall-release.tar" release.json images.tar.gz
+      - name: Upload and deploy
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.AGENTMALL_DEPLOY_SSH_KEY }}
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/agentmall-ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/agentmall-ssh/key"
+          trap 'rm -f "$RUNNER_TEMP/agentmall-ssh/key"' EXIT
+          cp deploy/ci/known_hosts "$RUNNER_TEMP/agentmall-ssh/known_hosts"
+          ssh -T -i "$RUNNER_TEMP/agentmall-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/agentmall-ssh/known_hosts" \
+            -o HostKeyAlgorithms=ecdsa-sha2-nistp256 -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=8 \
+            agentmall-ci@121.40.212.142 deploy < "$RUNNER_TEMP/agentmall-release.tar"

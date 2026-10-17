@@ -21,3 +21,8 @@ npm-debug.log*
 # Env files
 *.local
 .env.*.local
+
+# Local database dumps and runtime credentials
+/ai_shopping.sql
+.env
+.env.*
