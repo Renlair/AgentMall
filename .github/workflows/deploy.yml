@@ -31,9 +31,14 @@ jobs:
           import base64, os, re, textwrap
           from pathlib import Path
           value=os.environ.get('DEPLOY_SSH_KEY','').replace('\\n','\n').replace('\r','')
-          match=re.fullmatch(r'\s*-----BEGIN OPENSSH PRIVATE KEY-----\s*([A-Za-z0-9+/=\s]+)-----END OPENSSH PRIVATE KEY-----\s*',value)
+          compact=''.join(value.split())
+          match=re.search(r'-----BEGINOPENSSHPRIVATEKEY-----([A-Za-z0-9+/=]+)-----ENDOPENSSHPRIVATEKEY-----',compact)
           if not match:
-              raise SystemExit('AGENTMALL_DEPLOY_SSH_KEY must contain the complete OpenSSH PRIVATE key, including both marker lines. Re-copy it privately from Termius.')
+              print('Private-key BEGIN marker present: '+str('-----BEGINOPENSSHPRIVATEKEY-----' in compact))
+              print('Private-key END marker present: '+str('-----ENDOPENSSHPRIVATEKEY-----' in compact))
+              print('Value resembles a public key: '+str(value.strip().startswith(('ssh-ed25519 ','ssh-rsa '))))
+              print('Value resembles a shell command: '+str('cat /root/' in value))
+              raise SystemExit('The Secret does not contain a complete private-key block. No credential content has been printed.')
           body=''.join(match.group(1).split())
           try:
               raw=base64.b64decode(body,validate=True)
