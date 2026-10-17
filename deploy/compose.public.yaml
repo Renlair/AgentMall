@@ -1,0 +1,5 @@
+# Apply only AFTER localhost acceptance tests and checking host port 80.
+services:
+  web:
+    ports:
+      - "0.0.0.0:80:80"

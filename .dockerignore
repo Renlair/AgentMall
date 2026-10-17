@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/target
+**/dist
+**/.env
+**/.env.*
+**/files
+**/*.pem
+**/*.key
+**/*.tar
+**/*.tar.gz
+ai_shopping.sql
