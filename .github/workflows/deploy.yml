@@ -24,7 +24,28 @@ jobs:
       - name: Check deployment credentials
         env:
           DEPLOY_SSH_KEY: ${{ secrets.AGENTMALL_DEPLOY_SSH_KEY }}
-        run: test -n "$DEPLOY_SSH_KEY" || { echo 'Configure AGENTMALL_DEPLOY_SSH_KEY first'; exit 1; }
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/agentmall-ssh"
+          python3 - <<'PYKEY'
+          import base64, os, re, textwrap
+          from pathlib import Path
+          value=os.environ.get('DEPLOY_SSH_KEY','').replace('\\n','\n').replace('\r','')
+          match=re.fullmatch(r'\s*-----BEGIN OPENSSH PRIVATE KEY-----\s*([A-Za-z0-9+/=\s]+)-----END OPENSSH PRIVATE KEY-----\s*',value)
+          if not match:
+              raise SystemExit('AGENTMALL_DEPLOY_SSH_KEY must contain the complete OpenSSH PRIVATE key, including both marker lines. Re-copy it privately from Termius.')
+          body=''.join(match.group(1).split())
+          try:
+              raw=base64.b64decode(body,validate=True)
+              assert raw.startswith(b'openssh-key-v1\0')
+          except Exception:
+              raise SystemExit('The deployment key is incomplete or damaged. Re-copy the entire private key privately.')
+          path=Path(os.environ['RUNNER_TEMP'])/'agentmall-ssh/key'
+          path.write_text('-----BEGIN OPENSSH PRIVATE KEY-----\n'+'\n'.join(textwrap.wrap(body,70))+'\n-----END OPENSSH PRIVATE KEY-----\n')
+          path.chmod(0o600)
+          PYKEY
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/agentmall-ssh/key" > "$RUNNER_TEMP/agentmall-ssh/key.pub"
+          test "$(ssh-keygen -lf "$RUNNER_TEMP/agentmall-ssh/key.pub" | awk '{print $2}')" = 'SHA256:jAjOeqcgBd4LGlhdubwEqaErPIHJ8ce939zdTx/oT8Q' || { echo 'Deployment key does not match the authorized CI key'; exit 1; }
       - name: Test release receiver
         run: python3 deploy/ci/test_receiver.py
       - name: Build Linux amd64 images
@@ -44,13 +65,7 @@ jobs:
           PY
           tar -C "$RUNNER_TEMP/agentmall-release" -cf "$RUNNER_TEMP/agentmall-release.tar" release.json images.tar.gz
       - name: Upload and deploy
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.AGENTMALL_DEPLOY_SSH_KEY }}
         run: |
-          umask 077
-          mkdir -p "$RUNNER_TEMP/agentmall-ssh"
-          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/agentmall-ssh/key"
-          trap 'rm -f "$RUNNER_TEMP/agentmall-ssh/key"' EXIT
           cp deploy/ci/known_hosts "$RUNNER_TEMP/agentmall-ssh/known_hosts"
           ssh -T -i "$RUNNER_TEMP/agentmall-ssh/key" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
@@ -58,3 +73,6 @@ jobs:
             -o HostKeyAlgorithms=ecdsa-sha2-nistp256 -o ConnectTimeout=20 \
             -o ServerAliveInterval=15 -o ServerAliveCountMax=8 \
             agentmall-ci@121.40.212.142 deploy < "$RUNNER_TEMP/agentmall-release.tar"
+      - name: Clean deployment credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/agentmall-ssh/key" "$RUNNER_TEMP/agentmall-ssh/key.pub"
