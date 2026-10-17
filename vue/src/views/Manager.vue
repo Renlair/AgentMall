@@ -1,22 +1,26 @@
-﻿<template>
+<template>
   <div class="manager-container">
     <div class="manager-header">
       <div class="manager-header-left">
-        <img src="@/assets/imgs/logo.png" alt="">
-        <div class="title">AI 智能商城导购平台</div>
+        <router-link to="/manager/home" class="manager-brand" aria-label="AgentMall 控制台首页">
+          <svg viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="M4 11h24l2 22H2L4 11Z" stroke="currentColor" stroke-width="2"/><path d="M10 13V8a6 6 0 0 1 12 0v5" stroke="currentColor" stroke-width="2"/></svg>
+          <span>AgentMall<small>智选商城 · 控制台</small></span>
+        </router-link>
       </div>
       <div class="manager-header-center">
+        <button class="sidebar-toggle" type="button" :aria-expanded="sidebarOpen" aria-controls="manager-navigation" :aria-label="sidebarOpen ? '收起导航' : '展开导航'" @click="sidebarOpen = !sidebarOpen"><el-icon><Menu /></el-icon></button>
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/manager/home' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ router.currentRoute.value.meta.name }}</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/manager/home' }">工作台</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="router.currentRoute.value.path !== '/manager/home'">{{ router.currentRoute.value.meta.name }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
       <div class="manager-header-right">
-        <el-dropdown style="cursor: pointer">
-          <div style="padding-right: 20px; display: flex; align-items: center">
-            <img style="width: 40px; height: 40px; border-radius: 50%;" :src="data.user.avatar" alt="">
-            <span style="margin-left: 5px">{{ data.user.name }}</span><el-icon><arrow-down /></el-icon>
-          </div>
+        <router-link class="store-link" to="/front/home">前往商城 <el-icon><TopRight /></el-icon></router-link>
+        <el-dropdown trigger="click" popper-class="manager-account-menu">
+          <button type="button" class="account-button" aria-label="账号菜单">
+            <el-avatar :size="32" :src="data.user.avatar">{{ (data.user.name || data.user.username || '管').slice(0, 1) }}</el-avatar>
+            <span class="account-name">{{ data.user.name || data.user.username || '管理员' }}</span><el-icon><ArrowDown /></el-icon>
+          </button>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="router.push('/manager/person')">个人资料</el-dropdown-item>
@@ -27,12 +31,14 @@
         </el-dropdown>
       </div>
     </div>
-    <div style="display: flex">
-      <div class="manager-main-left">
+    <div class="manager-body">
+      <button v-if="sidebarOpen" class="sidebar-backdrop" type="button" aria-label="关闭导航" @click="sidebarOpen = false"></button>
+      <aside id="manager-navigation" class="manager-main-left" :class="{ 'is-open': sidebarOpen }" aria-label="控制台导航" @keydown.esc="sidebarOpen = false">
+        <div class="navigation-label">WORKSPACE <span>日常管理</span></div>
         <el-menu :default-active="router.currentRoute.value.path" :default-openeds="data.openeds" router>
           <el-menu-item index="/manager/home">
             <el-icon><HomeFilled /></el-icon>
-            <span>商城首页</span>
+            <span>工作台概览</span>
           </el-menu-item>
 
           <!-- 普通商城管理：用户、商品、订单、评价、售后等传统电商功能 -->
@@ -164,19 +170,24 @@
             <span>退出系统</span>
           </el-menu-item>
         </el-menu>
-      </div>
-      <div class="manager-main-right">
+        <div class="sidebar-note"><span class="sidebar-note-line"></span><p>为生活，选点好的。</p><small>AgentMall · 智选商城</small></div>
+      </aside>
+      <main class="manager-main-right" id="manager-content">
         <RouterView @updateUser="updateUser" />
-      </div>
+        <footer class="manager-footer"><span>AgentMall · 智选商城</span><span>把每一份用心，带进日常。</span></footer>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { reactive, ref, watch } from "vue";
 import router from "@/router/index.js";
 import { ElMessage } from "element-plus";
-import { Bell, Box, ChatDotRound, CollectionTag, Connection, DataAnalysis, Document, Files, Goods, HomeFilled, MagicStick, Menu, Notebook, Service, Setting, Tickets, User } from "@element-plus/icons-vue";
+import { ArrowDown, TopRight, Bell, ChatDotRound, CollectionTag, Connection, DataAnalysis, Document, Files, Goods, HomeFilled, MagicStick, Menu, Notebook, Service, Setting, Tickets, User } from "@element-plus/icons-vue";
+
+const sidebarOpen = ref(false)
+watch(() => router.currentRoute.value.path, () => { sidebarOpen.value = false })
 
 // 各二级菜单分组包含的路由路径，用于进入页面时自动展开对应分组
 const menuGroups = {
@@ -192,8 +203,13 @@ const activeGroup = Object.keys(menuGroups).find(key => menuGroups[key].includes
 
 const data = reactive({
   user: JSON.parse(localStorage.getItem('sys-user') || '{}'),
-  // 默认展开的二级菜单：命中当前分组则展开该分组，否则默认展开商城管理
-  openeds: [activeGroup || 'shop']
+  // 默认仅展开当前页面所属分组
+  openeds: activeGroup ? [activeGroup] : []
+})
+
+watch(() => router.currentRoute.value.path, (path) => {
+  const group = Object.keys(menuGroups).find(key => menuGroups[key].includes(path))
+  data.openeds = group ? [group] : []
 })
 
 const logout = () => {
@@ -211,9 +227,7 @@ if (!data.user.id) {
 }
 </script>
 
-<style scoped>
-@import "@/assets/css/manager.css";
-</style>
+<style src="@/assets/css/manager.css"></style>
 
 
 
