@@ -1,7 +1,6 @@
 FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 COPY springboot/pom.xml ./pom.xml
-RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp dependency:go-offline
 COPY springboot/src ./src
 COPY deploy/application.yml ./src/main/resources/application.yml
 RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp package

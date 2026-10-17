@@ -1,4 +1,5 @@
-import hashlib, importlib.util, io, json, tarfile, tempfile, unittest
+import contextlib, hashlib, importlib.util, io, json, tarfile, tempfile, unittest
+from unittest.mock import patch
 from pathlib import Path
 
 spec=importlib.util.spec_from_file_location('receiver',Path(__file__).with_name('receive-release.py'))
@@ -39,4 +40,34 @@ class ReceiverTests(unittest.TestCase):
         with self.assertRaises(receiver.DeploymentError):self.check(bad_digest=True)
     def test_unexpected_image(self):
         with self.assertRaises(receiver.DeploymentError):self.check(tags=['mysql:latest','agentmall-web:git-'+SHA])
+class DeploymentTests(unittest.TestCase):
+    def exercise(self,fail=False):
+        with tempfile.TemporaryDirectory() as name:
+            root=Path(name);app=root/'app';app.mkdir();state=root/'state';state.mkdir();incoming=root/'incoming';incoming.mkdir()
+            active=app/'compose.ci.yaml';active.write_text('old-override')
+            calls=[]
+            def inspect(args,**kwargs):
+                return ('old-backend' if args[-1]=='agentmall-backend-1' else 'old-web' if args[-1]=='agentmall-web-1' else 'database-id')+'\n'
+            health=[receiver.DeploymentError('not healthy'),None] if fail else [None]
+            with patch.object(receiver,'ROOT',app),patch.object(receiver,'STATE',state),patch.object(receiver,'inspect_image'),patch.object(receiver,'run',side_effect=lambda args,log,**kwargs:calls.append(args)),patch.object(receiver.subprocess,'check_output',side_effect=inspect),patch.object(receiver,'health_check',side_effect=health),contextlib.redirect_stdout(io.StringIO()):
+                if fail:
+                    with self.assertRaises(receiver.DeploymentError):receiver.deploy(incoming,SHA)
+                else:receiver.deploy(incoming,SHA)
+            updates=[args for args in calls if 'up' in args]
+            self.assertEqual(len(updates),2 if fail else 1)
+            for args in updates:
+                self.assertEqual(args[-2:],['backend','web'])
+                self.assertIn('--no-deps',args)
+                self.assertNotIn('down',args)
+            previous=json.loads((state/'releases'/SHA/'previous.yaml').read_text())
+            self.assertEqual(previous['services']['backend']['image'],'old-backend')
+            if fail:
+                self.assertEqual(active.read_text(),'old-override')
+                self.assertFalse((state/'current.json').exists())
+            else:
+                self.assertEqual(json.loads(active.read_text())['services']['web']['image'],'agentmall-web:git-'+SHA)
+                self.assertEqual(json.loads((state/'current.json').read_text())['commit'],SHA)
+    def test_success_preserves_database(self):self.exercise()
+    def test_failed_health_rolls_back(self):self.exercise(fail=True)
+
 if __name__=='__main__':unittest.main()

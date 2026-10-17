@@ -25,6 +25,8 @@ jobs:
         env:
           DEPLOY_SSH_KEY: ${{ secrets.AGENTMALL_DEPLOY_SSH_KEY }}
         run: test -n "$DEPLOY_SSH_KEY" || { echo 'Configure AGENTMALL_DEPLOY_SSH_KEY first'; exit 1; }
+      - name: Test release receiver
+        run: python3 deploy/ci/test_receiver.py
       - name: Build Linux amd64 images
         run: |
           docker build --platform linux/amd64 -f deploy/backend.Dockerfile -t "agentmall-backend:git-$GITHUB_SHA" .
