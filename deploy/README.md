@@ -37,3 +37,7 @@ python3 verify.py --after-restart
 ```
 
 后端变更同理更新 backend。数据库结构变更应先备份并单独执行经过审查的迁移脚本。保留上个镜像及 compose 配置即可回滚镜像。每次发布还应在浏览器验证登录页面和受影响的功能。
+
+## GitHub 自动发布
+
+推送到 main 后自动构建并更新已有服务器，配置步骤和回滚说明见 [ci/README.md](ci/README.md)。需一次性设置 GitHub Actions Secret `AGENTMALL_DEPLOY_SSH_KEY`。该密钥只允许应用发布，与维护用 SSH 密钥分开。
